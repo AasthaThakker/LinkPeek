@@ -2,7 +2,7 @@
 
 A lightweight browser extension that helps you quickly inspect suspicious links before opening them.
 
-Instead of manually checking every URL on multiple websites, LinkPeek gives a quick contextual overview directly inside the browser — useful for security enthusiasts, SOC analysts, researchers, or anyone who deals with lots of links daily.
+Instead of manually checking every URL on multiple websites, LinkPeek gives a quick contextual overview directly inside the browser, useful for security enthusiasts, SOC analysts, researchers, or anyone who deals with lots of links daily.
 
 > This project is still under active development and ongoing improvements are being made for better stealth detection, performance optimization, and overall user experience.
 
