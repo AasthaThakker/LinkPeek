@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LinkPeek</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="cyber-header">
+      <div class="brand">
+        <svg class="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span class="title">LINKPEEK</span>
+      </div>
+      <div class="pulse-indicator glow-green" id="statusPulse" title="System Online"></div>
+    </header>
+
+    <!-- Scanner Input -->
+    <div class="input-panel">
+      <div class="input-wrapper">
+        <input type="text" id="urlInput" placeholder="Paste suspicious URL here..." autocomplete="off">
+        <button id="clearBtn" class="clear-btn" title="Clear input" style="display: none;">&times;</button>
+      </div>
+      <button id="analyzeBtn" class="cyber-btn">
+        <span class="btn-text">ANALYZE URL</span>
+      </button>
+    </div>
+
+    <!-- Scanner Screen (Hidden by Default) -->
+    <div id="scannerScreen" class="scanner-screen" style="display: none;">
+      <div class="scanner-box">
+        <div class="scanner-line"></div>
+        <div class="scanner-text">SCANNING TARGET NETWORK...</div>
+        <div class="scanner-subtext" id="scannerSubtext">Checking domain structures...</div>
+      </div>
+    </div>
+
+    <!-- Analysis Results (Hidden by Default) -->
+    <div id="resultsCard" class="results-card" style="display: none;">
+      
+      <!-- LAYER 1: DECISION SUMMARY -->
+      <div class="results-header">
+        <div class="gauge-container">
+          <svg class="progress-ring" width="70" height="70">
+            <circle class="progress-ring__circle-bg" stroke="#111827" stroke-width="6" fill="transparent" r="28" cx="35" cy="35"/>
+            <circle class="progress-ring__circle" id="riskGauge" stroke="#10b981" stroke-width="6" fill="transparent" r="28" cx="35" cy="35"/>
+          </svg>
+          <div class="gauge-text" id="gaugeScore">0</div>
+        </div>
+        
+        <div class="risk-info">
+          <div class="risk-badge" id="riskBadge">AWAITING ANALYSIS</div>
+          <div class="confidence-badge" id="confidenceBadge">Confidence: Medium</div>
+        </div>
+      </div>
+
+      <!-- Cache Badge -->
+      <div id="cacheBadge" class="cache-badge" style="display: none;">⚡ Cached Result (Last 24h)</div>
+
+      <!-- Primary 1-line Explanation -->
+      <div class="explanation-box" id="primaryExplanationBox">
+        <div class="risk-explanation" id="storyIntent">Resolving page intent...</div>
+        <div class="risk-explanation" id="storyScenario" style="font-weight: 500; margin-top: 4px;">Evaluating threat scenarios...</div>
+      </div>
+
+      <!-- LAYER 2: VISUAL URL BREAKDOWN & WHY SUSPICIOUS -->
+      <div class="layer-section">
+        <div class="section-title">Visual URL Breakdown</div>
+        <div class="url-breakdown" id="urlBreakdown">
+          <!-- Populated dynamically with highlighted substituted characters -->
+        </div>
+      </div>
+
+      <!-- DYNAMIC EXPLAINABILITY & TRANSPARENCY SECTION -->
+      <div class="explainability-section">
+        
+        <!-- Layered Scoring Profile -->
+        <div class="explain-card">
+          <div class="explain-card-title">Layered Scoring Profile</div>
+          <table class="explain-table" id="layeredScoringTable">
+            <thead>
+              <tr>
+                <th>Risk Layer</th>
+                <th style="text-align: right;">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Structural Risk</td>
+                <td id="scoreLayerStructural" style="text-align: right;">--</td>
+              </tr>
+              <tr>
+                <td>Behavioral Risk</td>
+                <td id="scoreLayerBehavioral" style="text-align: right;">--</td>
+              </tr>
+              <tr>
+                <td>Reputation Confidence</td>
+                <td id="scoreLayerReputation" style="text-align: right;">--</td>
+              </tr>
+              <tr>
+                <td>Runtime Observation</td>
+                <td id="scoreLayerRuntime" style="text-align: right;">--</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="concern-bar">
+            <span>Overall Contextual Concern:</span>
+            <span id="overallConcernValue" class="concern-badge concern-low">Low</span>
+          </div>
+        </div>
+
+        <!-- Why This Score? (Explainability Table) -->
+        <div class="explain-card">
+          <div class="explain-card-title">Why This Score? (Evidence Weights)</div>
+          <table class="explain-table" id="scoreExplainabilityTable">
+            <thead>
+              <tr>
+                <th>Indicator</th>
+                <th style="text-align: right;">Impact</th>
+              </tr>
+            </thead>
+            <tbody id="explainabilityList">
+              <!-- Dynamically populated with active indicators and points -->
+            </tbody>
+          </table>
+          <div class="final-score-bar">
+            <span>Final Contextual Risk Score:</span>
+            <span id="finalContextualScore" style="font-weight: 800; font-size: 14px; color: var(--neon-cyan);">0</span>
+          </div>
+        </div>
+
+        <!-- Observed vs Inferred -->
+        <div class="explain-card">
+          <div class="explain-card-title">Observed vs Inferred Context</div>
+          <div class="obs-inf-grid">
+            <div class="obs-column">
+              <div class="column-title">Observed (Facts)</div>
+              <ul class="obs-list" id="observedFactsList">
+                <!-- Dynamically populated observed facts -->
+              </ul>
+            </div>
+            <div class="inf-column">
+              <div class="column-title">Inferred (Interpretation)</div>
+              <ul class="inf-list" id="inferredInterpretationsList">
+                <!-- Dynamically populated inferences -->
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evidence Classification -->
+        <div class="explain-card">
+          <div class="explain-card-title">Evidence Classification</div>
+          <div class="evidence-cats">
+            <div class="evidence-cat-group" id="groupStructuralAnomalies">
+              <div class="cat-title">Structural Anomalies</div>
+              <ul class="story-bullets" id="structuralAnomaliesList"></ul>
+            </div>
+            <div class="evidence-cat-group" id="groupBehavioralAnomalies">
+              <div class="cat-title">Behavioral Anomalies</div>
+              <ul class="story-bullets" id="behavioralAnomaliesList"></ul>
+            </div>
+            <div class="evidence-cat-group" id="groupReputationCorroboration">
+              <div class="cat-title">Reputation Corroboration</div>
+              <ul class="story-bullets" id="reputationCorroborationList"></ul>
+            </div>
+            <div class="evidence-cat-group" id="groupActiveThreats">
+              <div class="cat-title">Active Malicious Behavior</div>
+              <ul class="story-bullets" id="activeThreatsList"></ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- LAYER 3: TECHNICAL EVIDENCE (COLLAPSED BY DEFAULT) -->
+      <details class="cyber-details" id="evidenceDetails">
+        <summary class="details-summary">
+          <span>Layer 3: Technical Evidence</span>
+          <span class="count-pill" id="evidencePill">Timeline & Redirects</span>
+        </summary>
+        <div class="details-content">
+          <!-- Redirect Chain -->
+          <div class="sub-evidence-title" style="font-size: 10px; font-weight: bold; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase;">Redirect Chain (<span id="redirectCount">0</span> hops)</div>
+          <div class="chain-flow" id="chainList">
+            <!-- Graphical nodes -->
+          </div>
+
+          <!-- Trust Timeline -->
+          <div class="timeline-container" style="margin-top: 12px;">
+            <div class="timeline-title">Trust Timeline</div>
+            <div class="timeline-flow" id="timelineFlow">
+              <!-- Dynamic age, ssl, dns status -->
+            </div>
+          </div>
+
+          <!-- DNS details grid -->
+          <div class="dns-grid" style="margin-top: 8px;">
+            <div class="dns-item">
+              <div class="dns-label">Resolved IP</div>
+              <div class="dns-val" id="dnsIp">Resolving...</div>
+            </div>
+            <div class="dns-item">
+              <div class="dns-label">Hosting ISP</div>
+              <div class="dns-val" id="dnsOrg">Resolving...</div>
+            </div>
+            <div class="dns-item">
+              <div class="dns-label">Registrar</div>
+              <div class="dns-val" id="dnsRegistrar">Resolving...</div>
+            </div>
+            <div class="dns-item">
+              <div class="dns-label">Location</div>
+              <div class="dns-val" id="dnsCountry">Resolving...</div>
+            </div>
+            <div class="dns-item">
+              <div class="dns-label">Domain Lifecycle</div>
+              <div class="dns-val" id="dnsLifecycle">Resolving...</div>
+            </div>
+            <div class="dns-item">
+              <div class="dns-label">WHOIS Created</div>
+              <div class="dns-val" id="whoisCreated">Resolving...</div>
+            </div>
+            <div class="dns-item">
+              <div class="dns-label">WHOIS Expires</div>
+              <div class="dns-val" id="whoisExpires">Resolving...</div>
+            </div>
+            <div class="dns-item">
+              <div class="dns-label">Domain Age</div>
+              <div class="dns-val" id="whoisAge">Resolving...</div>
+            </div>
+            <div class="dns-item" id="dnsMxContainer" style="display: none;">
+              <div class="dns-label">MX Records</div>
+              <div class="dns-val" id="dnsMx">Resolving...</div>
+            </div>
+            <div class="dns-item">
+              <div class="dns-label">NS Records</div>
+              <div class="dns-val" id="dnsNs">Resolving...</div>
+            </div>
+            <div class="dns-item" id="dnsSpfContainer" style="display: none;">
+              <div class="dns-label">SPF Status</div>
+              <div class="dns-val" id="dnsSpf">Resolving...</div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- LAYER 4: DEEP FORENSIC ANALYSIS (COLLAPSED BY DEFAULT) -->
+      <details class="cyber-details" id="forensicsDetails">
+        <summary class="details-summary">
+          <span>Layer 4: Deep Forensics</span>
+          <span class="count-pill">8-Vector Audit</span>
+        </summary>
+        <div class="details-content">
+          <!-- 8 Threat Layer Audit -->
+          <div class="layers-container" id="layersAuditContainer" style="margin-bottom: 12px;">
+            <div class="layer-row" id="layer-url">
+              <span class="layer-status-icon status-skipped"></span>
+              <div class="layer-info">
+                <div class="layer-name">1. URL Structure</div>
+                <div class="layer-desc" id="layerDesc-url">Surface anomaly scan</div>
+              </div>
+            </div>
+            <div class="layer-row" id="layer-domain">
+              <span class="layer-status-icon status-skipped"></span>
+              <div class="layer-info">
+                <div class="layer-name">2. Domain Intelligence</div>
+                <div class="layer-desc" id="layerDesc-domain">Registry trust timeline</div>
+              </div>
+            </div>
+            <div class="layer-row" id="layer-dom">
+              <span class="layer-status-icon status-skipped"></span>
+              <div class="layer-info">
+                <div class="layer-name">3. DOM Inspection</div>
+                <div class="layer-desc" id="layerDesc-dom">Structural mimicry audit</div>
+              </div>
+            </div>
+            <div class="layer-row" id="layer-js">
+              <span class="layer-status-icon status-skipped"></span>
+              <div class="layer-info">
+                <div class="layer-name">4. JS Behavior</div>
+                <div class="layer-desc" id="layerDesc-js">Script logic inspection</div>
+              </div>
+            </div>
+            <div class="layer-row" id="layer-psychology">
+              <span class="layer-status-icon status-skipped"></span>
+              <div class="layer-info">
+                <div class="layer-name">5. Psychology Analysis</div>
+                <div class="layer-desc" id="layerDesc-psychology">Urgency & manipulation keywords</div>
+              </div>
+            </div>
+            <div class="layer-row" id="layer-browser">
+              <span class="layer-status-icon status-skipped"></span>
+              <div class="layer-info">
+                <div class="layer-name">6. Browser Behavior</div>
+                <div class="layer-desc" id="layerDesc-browser">Interactive hijack detection</div>
+              </div>
+            </div>
+            <div class="layer-row" id="layer-visual">
+              <span class="layer-status-icon status-skipped"></span>
+              <div class="layer-info">
+                <div class="layer-name">7. Visual Analysis</div>
+                <div class="layer-desc" id="layerDesc-visual">Homograph & homoglyph check</div>
+              </div>
+            </div>
+            <div class="layer-row" id="layer-correlation">
+              <span class="layer-status-icon status-skipped"></span>
+              <div class="layer-info">
+                <div class="layer-name">8. Correlation Engine</div>
+                <div class="layer-desc" id="layerDesc-correlation">Multi-layered threat intent</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Reputation Query (always visible when key is configured) -->
+          <div class="rep-api-bar" id="repApiBar" style="display: none;">
+            <button id="fetchRepBtn" class="rep-btn">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14h-2v-2h2zm0-4h-2V7h2z"/>
+              </svg>
+              <span>On-Demand reputation Check (VT & AbuseIPDB)</span>
+            </button>
+          </div>
+
+          <!-- Live Reputation Badges -->
+          <div class="live-rep-box" id="liveRepBox" style="display: none;">
+            <div class="rep-badge-grid">
+              <div class="rep-badge-card" id="vtCard">
+                <div class="rep-badge-title">VirusTotal</div>
+                <div class="rep-badge-val" id="vtScore">--</div>
+          </div>
+
+          <!-- Technical Metrics -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Entropy Score</div>
+              <div class="metric-value" id="metricEntropy">0.00</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Connection Class</div>
+              <div class="metric-value" id="metricProtocol">HTTPS</div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+    </div>
+
+    <!-- Error message display -->
+    <div id="errorCard" class="error-card" style="display: none;">
+      <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <div class="error-msg" id="errorMsg">Failed to parse URL. Ensure it is a valid format.</div>
+    </div>
+
+    <!-- Settings Accordion (Always Visible at bottom) -->
+    <details class="cyber-details settings-accordion">
+      <summary class="details-summary settings-summary">
+        <div class="brand">
+          <svg class="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span style="font-size: 11px;">System Configuration</span>
+        </div>
+      </summary>
+      <div class="details-content settings-content">
+        
+        <!-- Toggle: Active Scan -->
+        <div class="setting-item">
+          <div class="setting-text-box">
+            <div class="setting-title">Active Redirect Tracing</div>
+            <div class="setting-desc">Queries URL redirect chains in background</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="activeScanToggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <!-- Toggle: Hover Preview -->
+        <div class="setting-item">
+          <div class="setting-text-box">
+            <div class="setting-title">Smart Hover Preview</div>
+            <div class="setting-desc">Show safety info card on link hover</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="tooltipToggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <!-- Radios: Hover Theme selection -->
+        <div class="setting-row">
+          <span class="setting-title">Hover Preview Theme</span>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="tooltipTheme" value="cyber" checked>
+              <span>Cyberpunk</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="tooltipTheme" value="slate">
+              <span>Slate Grey</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="api-divider">External API Integrations</div>
+
+        <!-- Input: VirusTotal key -->
+        <div class="setting-input-group">
+          <label for="vtApiKey">VirusTotal API Key (V3)</label>
+          <input type="password" id="vtApiKey" placeholder="Enter VT API Key...">
+        </div>
+
+        <!-- Input: AbuseIPDB key -->
+        <div class="setting-input-group">
+          <label for="abuseApiKey">AbuseIPDB API Key</label>
+          <input type="password" id="abuseApiKey" placeholder="Enter AbuseIPDB Key...">
+        </div>
+
+        <button id="saveSettingsBtn" class="save-settings-btn">SAVE CONFIGURATION</button>
+      </div>
+    </details>
+
+  </div>
+
+  <script src="utils.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
