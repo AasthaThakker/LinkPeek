@@ -1,6 +1,8 @@
 # LinkPeek
 
-![Project Icon](./icon.png)
+<p align="center">
+  <img src="./icon.png" width="120" alt="Project Icon">
+</p>
 
 A lightweight browser extension that helps you quickly inspect suspicious links before opening them.
 
